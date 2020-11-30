@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0DC1655B2573000E00BFF92E /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 0DC1655A2573000E00BFF92E /* main.m */; };
+		0DC16568257300F900BFF92E /* vm.m in Sources */ = {isa = PBXBuildFile; fileRef = 0DC16567257300F900BFF92E /* vm.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -23,8 +24,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0D64569C25741DD300384DA2 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		0DC165572573000E00BFF92E /* podracer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = podracer; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DC1655A2573000E00BFF92E /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		0DC165642573005000BFF92E /* podracer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = podracer.entitlements; sourceTree = "<group>"; };
+		0DC16566257300F900BFF92E /* vm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vm.h; sourceTree = "<group>"; };
+		0DC16567257300F900BFF92E /* vm.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = vm.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +62,10 @@
 		0DC165592573000E00BFF92E /* podracer */ = {
 			isa = PBXGroup;
 			children = (
+				0DC16566257300F900BFF92E /* vm.h */,
+				0DC16567257300F900BFF92E /* vm.m */,
+				0D64569C25741DD300384DA2 /* README.md */,
+				0DC165642573005000BFF92E /* podracer.entitlements */,
 				0DC1655A2573000E00BFF92E /* main.m */,
 			);
 			path = podracer;
@@ -118,6 +127,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0DC16568257300F900BFF92E /* vm.m in Sources */,
 				0DC1655B2573000E00BFF92E /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -239,7 +249,12 @@
 		0DC1655F2573000E00BFF92E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = podracer/podracer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = DBNUDFQ52C;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				PRODUCT_BUNDLE_IDENTIFIER = podracer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -247,7 +262,12 @@
 		0DC165602573000E00BFF92E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = podracer/podracer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = DBNUDFQ52C;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				PRODUCT_BUNDLE_IDENTIFIER = podracer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
