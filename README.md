@@ -14,6 +14,3 @@ open /Volumes/Ubuntu/casper
 ```shell
 ./podracer -k vmlinuz -i initrd.img -d squashfs.img -c fedora-x86_64-33-1.2.iso -a "console=hvc0 root=live:CDLABEL=Fedora-Sec-Live-33-1-2 rd.live.image rd.live.check quiet"
 ```
-
--a "console=hvc0 root=live:CDLABEL=Fedora-Sec-Live-33-1-2 rd.live.image rd.live.check quiet"
-
