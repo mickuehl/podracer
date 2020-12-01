@@ -13,176 +13,180 @@
 #include <util.h>
 #include "vm.h"
 
-static int createPty(bool waitForConnection)
-{
-    struct termios tos;
-    char ptsn[PATH_MAX];
-    int sfd;
-    int tty_fd;
-
-    if (openpty(&tty_fd, &sfd, ptsn, &tos, NULL) < 0) {
-        perror("openpty: ");
-        return -1;
-    }
-
-    if (tcgetattr(sfd, &tos) < 0) {
-        perror("tcgetattr:");
-        return -1;
-    }
-
-    cfmakeraw(&tos);
-    if (tcsetattr(sfd, TCSAFLUSH, &tos)) {
-        perror("tcsetattr:");
-        return -1;
-    }
-    close(sfd);
-
-    int f = fcntl(tty_fd, F_GETFL);
-    fcntl(tty_fd, F_SETFL, f | O_NONBLOCK);
-
-    NSLog(@"+++ fd %d connected to %s\n", tty_fd, ptsn);
+static void attachDevices(VZVirtualMachineConfiguration *conf, NSString *discPath, NSString *cdromPath, NSString *ifConf) {
     
-    if (waitForConnection) {
-        // Causes a HUP:
-        close(open(ptsn, O_RDWR | O_NOCTTY));
-
-        NSLog(@"+++ Waiting for connection to:  %s\n", ptsn);
-
-        // Poll for the HUP to go away:
-        struct pollfd pfd = {
-            .fd = tty_fd,
-            .events = POLLHUP
-        };
-        
-        do {
-            poll(&pfd, 1, 100);
-        } while (pfd.revents & POLLHUP);
-    }
-
-    return tty_fd;
-}
-
-/* console_type: 0 stdout/in, 1 pty */
-VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
-    unsigned int nr_cpus, unsigned int console_type, NSString *cmdline, NSString *kernel_path,
-    NSString *initrd_path, NSString *disc_path, NSString *cdrom_path, NSString *bridged_eth)
-{
-    // Linux bootloader setup:
-    
-    NSURL *kernelURL = [NSURL fileURLWithPath:kernel_path];
-    NSURL *initrdURL = nil;
+    // stdin, stdout
+    int ifd = 0, ofd = 1;
+    VZNetworkDeviceAttachment *nda = nil;
     NSURL *discURL = nil;
     NSURL *cdromURL = nil;
-
-    if (initrd_path)
-        initrdURL = [NSURL fileURLWithPath:initrd_path];
-
-    if (disc_path)
-        discURL = [NSURL fileURLWithPath:disc_path];
-
-    if (cdrom_path)
-        cdromURL = [NSURL fileURLWithPath:cdrom_path];
-
-    NSLog(@"+++ Linux bootloader setup: kernel at %@, initrd at %@, cmdline '%@', %d cpus, %luMB memory\n", kernelURL, initrdURL, cmdline, nr_cpus, mem_size_mb);
-
-    VZLinuxBootLoader *lbl = [[VZLinuxBootLoader alloc] initWithKernelURL:kernelURL];
-    [lbl setCommandLine:cmdline];
-    if (initrdURL)
-        [lbl setInitialRamdiskURL:initrdURL];
-
-    // Configuration setup
     
-    VZVirtualMachineConfiguration *conf = [[VZVirtualMachineConfiguration alloc] init];
-
-    /* I can't seem to access members such as maximumAllowedCPUCount and maximumAllowedMemorySize :( */
-    [conf setBootLoader:lbl];
-    [conf setCPUCount:nr_cpus];
-    [conf setMemorySize:mem_size_mb*1024*1024UL];
-
-    // Devices
+    if (discPath)
+        discURL = [NSURL fileURLWithPath:discPath];
+    if (cdromPath)
+        cdromURL = [NSURL fileURLWithPath:cdromPath];
     
-    // Serial
-    int ifd = 0, ofd = 1;
-
-    if (console_type == 1) {
-        int pty = createPty(true);
-        if (pty < 0) {
-            NSLog(@"--- Error creating pty for serial console!\n");
-            return nil;
-        }
-        ifd = pty;
-        ofd = pty;
-    }
-
-    NSFileHandle *cons_out = [[NSFileHandle alloc] initWithFileDescriptor:ofd];
-    NSFileHandle *cons_in = [[NSFileHandle alloc] initWithFileDescriptor:ifd];
-    VZSerialPortAttachment *spa = [[VZFileHandleSerialPortAttachment alloc] initWithFileHandleForReading:cons_in fileHandleForWriting:cons_out];
+    NSFileHandle *stdOut = [[NSFileHandle alloc] initWithFileDescriptor:ofd];
+    NSFileHandle *stdIn = [[NSFileHandle alloc] initWithFileDescriptor:ifd];
+    VZSerialPortAttachment *spa = [[VZFileHandleSerialPortAttachment alloc] initWithFileHandleForReading:stdIn fileHandleForWriting:stdOut];
     
-    VZVirtioConsoleDeviceSerialPortConfiguration *cons_conf = [[VZVirtioConsoleDeviceSerialPortConfiguration alloc] init];
-    [cons_conf setAttachment:spa];
-    [conf setSerialPorts:@[cons_conf]];
-
-    // Network
+    VZVirtioConsoleDeviceSerialPortConfiguration *consConf = [[VZVirtioConsoleDeviceSerialPortConfiguration alloc] init];
+    [consConf setAttachment:spa];
+    [conf setSerialPorts:@[consConf]];
+    
+    // network devices
     NSArray *bni = [VZBridgedNetworkInterface networkInterfaces];
     VZBridgedNetworkInterface *iface = nil;
     for (id o in bni) {
-        if (![[o identifier] compare:bridged_eth]) {
-            NSLog(@"+++ Found bridged interface object for %@ (%@)\n", [o identifier], [o localizedDisplayName]);
+        if (![[o identifier] compare:ifConf]) {
+            NSLog(@"[  OK  ] Found bridged interface for %@ (%@).\n", [o identifier], [o localizedDisplayName]);
             iface = o;
         }
     }
 
-    if (bridged_eth && !iface) {
-        NSLog(@"--- Warning: ethernet interface %@ not found\n", bridged_eth);
+    if (ifConf && !iface) {
+        NSLog(@"[FAILED] Warning: Network interface '%@' not found.\n", ifConf);
     }
-
-    VZNetworkDeviceAttachment *nda = nil;
-
     if (iface) {
-        // Attempt to create a bridged attachment:
         nda = [[VZBridgedNetworkDeviceAttachment alloc] initWithInterface:iface];
     }
-    // Otherwise, or if failed, create a NAT attachment:
     if (!nda) {
         nda = [[VZNATNetworkDeviceAttachment alloc] init];
     }
     
-    VZVirtioNetworkDeviceConfiguration *net_conf = [[VZVirtioNetworkDeviceConfiguration alloc] init];
-    [net_conf setAttachment:nda];
-    [conf setNetworkDevices:@[net_conf]];
+    VZVirtioNetworkDeviceConfiguration *netConf = [[VZVirtioNetworkDeviceConfiguration alloc] init];
+    [netConf setAttachment:nda];
+    [conf setNetworkDevices:@[netConf]];
     
-    // Entropy
-    VZEntropyDeviceConfiguration *entropy_conf = [[VZVirtioEntropyDeviceConfiguration alloc] init];
-    [conf setEntropyDevices:@[entropy_conf]];
+    // entropy device for random numbers
+    VZEntropyDeviceConfiguration *entropyConf = [[VZVirtioEntropyDeviceConfiguration alloc] init];
+    [conf setEntropyDevices:@[entropyConf]];
     
-    // Storage/disc
-    NSArray *discs = @[];
+    // volumes
+    NSArray *volumes = @[];
 
     if (discURL) {
-        NSLog(@"+++ Attaching disc %@\n", discURL);
         VZDiskImageStorageDeviceAttachment *disc_sda = [[VZDiskImageStorageDeviceAttachment alloc] initWithURL:discURL readOnly:false error:nil];
         if (disc_sda) {
             VZStorageDeviceConfiguration *disc_conf = [[VZVirtioBlockDeviceConfiguration alloc] initWithAttachment:disc_sda];
-            discs = [discs arrayByAddingObject:disc_conf];
+            volumes = [volumes arrayByAddingObject:disc_conf];
+            
+            NSLog(@"[  OK  ] Attached disc '%@'.\n", discURL);
         } else {
-            NSLog(@"--- Couldn't open disc at %@\n", discURL);
+            NSLog(@"[FAILED] Couldn't open disc at %@.\n", discURL);
         }
     }
 
     if (cdromURL) {
-        NSLog(@"+++ Attaching CDROM %@\n", cdromURL);
-        VZDiskImageStorageDeviceAttachment *cdrom_sda = [[VZDiskImageStorageDeviceAttachment alloc]
-                                                         initWithURL:cdromURL
-                                                         readOnly:true error:nil];
+        VZDiskImageStorageDeviceAttachment *cdrom_sda = [[VZDiskImageStorageDeviceAttachment alloc] initWithURL:cdromURL readOnly:true error:nil];
         if (cdrom_sda) {
             VZStorageDeviceConfiguration *cdrom_conf = [[VZVirtioBlockDeviceConfiguration alloc] initWithAttachment:cdrom_sda];
-            discs = [discs arrayByAddingObject:cdrom_conf];
+            volumes = [volumes arrayByAddingObject:cdrom_conf];
+            
+            NSLog(@"[  OK  ] Attached CDROM '%@'.\n", cdromURL);
         } else {
-            NSLog(@"--- Couldn't open disc at %@\n", discURL);
+            NSLog(@"[FAILED] Couldn't open disc at %@.\n", discURL);
         }
     }
 
-    [conf setStorageDevices:discs];
+    [conf setStorageDevices:volumes];
+}
 
+static VZVirtualMachineConfiguration *createVMConfiguration(NSString *pathToKernel, NSString *pathToRamdisk, NSString *kernelParams, unsigned int cpus, unsigned long memSize) {
+    
+    // bootloader setup
+    NSURL *kernelURL = [NSURL fileURLWithPath:pathToKernel];
+    NSURL *initrdURL = nil;
+    
+    if (pathToRamdisk)
+        initrdURL = [NSURL fileURLWithPath:pathToRamdisk];
+    
+    VZLinuxBootLoader *lbl = [[VZLinuxBootLoader alloc] initWithKernelURL:kernelURL];
+    [lbl setCommandLine:kernelParams];
+    if (initrdURL)
+        [lbl setInitialRamdiskURL:initrdURL];
+    
+    // VM configuration
+    VZVirtualMachineConfiguration *conf = [[VZVirtualMachineConfiguration alloc] init];
+    [conf setBootLoader:lbl];
+    [conf setCPUCount:cpus];
+    [conf setMemorySize:memSize*1024*1024UL];
+    
     return conf;
+}
+
+NSString *stateToString(int state) {
+
+    switch(state) {
+        case VZVirtualMachineStateStopped:
+            return @"STOPPED";
+        case VZVirtualMachineStateRunning:
+            return @"RUNNING";
+        case VZVirtualMachineStatePaused:
+            return @"PAUSED";
+        case VZVirtualMachineStateError:
+            return @"ERROR";
+        case VZVirtualMachineStateStarting:
+            return @"STARTING";
+        case VZVirtualMachineStatePausing:
+            return @"PAUSING";
+        case VZVirtualMachineStateResuming:
+            return @"RESUMING";
+        default:
+            return @"UNKNOWN";
+    }
+}
+
+int startVirtualMachine(NSString *pathToKernel, NSString *pathToRamdisk, NSString *kernelParams, NSString *discPath, NSString *cdromPath, NSString *ifConf, unsigned int cpus, unsigned long memSize) {
+    
+    // create the basic kernel/VM configuration
+    VZVirtualMachineConfiguration *conf = createVMConfiguration(pathToKernel, pathToRamdisk, kernelParams, cpus, memSize) ;
+    if (!conf) {
+        NSLog(@"[FAILED] Couldn't create VM configuration.\n");
+        exit(1);
+    }
+    
+    // attach stdio, discs and network
+    attachDevices(conf, discPath, cdromPath, ifConf) ;
+    
+    // validate the configuration
+    NSError *confErr = NULL;
+    [conf validateWithError:&confErr];
+
+    if (confErr) {
+        NSLog(@"[FAILED] VM validation failed: %@\n", confErr);
+        exit(1);
+    }
+    NSLog(@"[  OK  ] VM configuration is valid.\n");
+ 
+    // start the VM
+    dispatch_queue_t queue = dispatch_queue_create("Secondary queue", NULL);
+    
+    VZVirtualMachine *vm = [[VZVirtualMachine alloc] initWithConfiguration:conf queue:queue];
+    
+    dispatch_sync(queue, ^{
+        NSLog(@"         %@", stateToString((int)vm.state)) ;
+        if (!vm.canStart) {
+            NSLog(@"[FAILED] VM can not be started :(\n");
+            exit(1);
+        }
+    });
+ 
+    dispatch_sync(queue, ^{
+        [vm startWithCompletionHandler:^(NSError *errorOrNil){
+            if (errorOrNil) {
+                NSLog(@"[FAILED] VM start error: %@\n", errorOrNil);
+                exit(1);
+            } else {
+                NSLog(@"[  OK  ] VM started.\n");
+            }
+        }];
+    });
+    
+    // We could register a delegate and get async updates from the state, e.g. shutdown.
+    do {
+        sleep(1);
+    } while(vm.state == VZVirtualMachineStateRunning || vm.state == VZVirtualMachineStateStarting);
+    
+    return (int)vm.state ;
 }

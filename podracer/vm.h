@@ -2,8 +2,8 @@
 #ifndef vm_h
 #define vm_h
 
-VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
-    unsigned int nr_cpus, unsigned int console_type, NSString *cmdline, NSString *kernel_path,
-    NSString *initrd_path, NSString *disc_path, NSString *cdrom_path, NSString *bridged_eth) ;
+int startVirtualMachine(NSString *pathToKernel, NSString *pathToRamdisk, NSString *kernelParams, NSString *discPath, NSString *cdromPath, NSString *ifConf, unsigned int cpus, unsigned long memSize) ;
+
+NSString *stateToString(int state) ;
 
 #endif /* vm_h */
