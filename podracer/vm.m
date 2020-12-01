@@ -1,9 +1,3 @@
-//
-//  vm.m
-//  podracer
-//
-//  Created by Michael Kuehl on 28.11.20.
-//
 
 #import <Foundation/Foundation.h>
 #import <Virtualization/Virtualization.h>
@@ -73,9 +67,8 @@ VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
     unsigned int nr_cpus, unsigned int console_type, NSString *cmdline, NSString *kernel_path,
     NSString *initrd_path, NSString *disc_path, NSString *cdrom_path, NSString *bridged_eth)
 {
-    /* **************************************************************** */
-    /* Linux bootloader setup:
-     */
+    // Linux bootloader setup:
+    
     NSURL *kernelURL = [NSURL fileURLWithPath:kernel_path];
     NSURL *initrdURL = nil;
     NSURL *discURL = nil;
@@ -90,17 +83,15 @@ VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
     if (cdrom_path)
         cdromURL = [NSURL fileURLWithPath:cdrom_path];
 
-    NSLog(@"+++ kernel at %@, initrd at %@, cmdline '%@', %d cpus, %luMB memory\n",
-          kernelURL, initrdURL, cmdline, nr_cpus, mem_size_mb);
+    NSLog(@"+++ Linux bootloader setup: kernel at %@, initrd at %@, cmdline '%@', %d cpus, %luMB memory\n", kernelURL, initrdURL, cmdline, nr_cpus, mem_size_mb);
 
     VZLinuxBootLoader *lbl = [[VZLinuxBootLoader alloc] initWithKernelURL:kernelURL];
     [lbl setCommandLine:cmdline];
     if (initrdURL)
         [lbl setInitialRamdiskURL:initrdURL];
 
-    /* Configuration setup:
-     * (Note docs don't show an init method on this class....)
-     */
+    // Configuration setup
+    
     VZVirtualMachineConfiguration *conf = [[VZVirtualMachineConfiguration alloc] init];
 
     /* I can't seem to access members such as maximumAllowedCPUCount and maximumAllowedMemorySize :( */
@@ -108,7 +99,6 @@ VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
     [conf setCPUCount:nr_cpus];
     [conf setMemorySize:mem_size_mb*1024*1024UL];
 
-    /* **************************************************************** */
     // Devices
     
     // Serial
@@ -126,14 +116,12 @@ VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
 
     NSFileHandle *cons_out = [[NSFileHandle alloc] initWithFileDescriptor:ofd];
     NSFileHandle *cons_in = [[NSFileHandle alloc] initWithFileDescriptor:ifd];
-    VZSerialPortAttachment *spa = [[VZFileHandleSerialPortAttachment alloc]
-                                   initWithFileHandleForReading:cons_in
-                                   fileHandleForWriting:cons_out];
+    VZSerialPortAttachment *spa = [[VZFileHandleSerialPortAttachment alloc] initWithFileHandleForReading:cons_in fileHandleForWriting:cons_out];
+    
     VZVirtioConsoleDeviceSerialPortConfiguration *cons_conf = [[VZVirtioConsoleDeviceSerialPortConfiguration alloc] init];
     [cons_conf setAttachment:spa];
     [conf setSerialPorts:@[cons_conf]];
 
-    
     // Network
     NSArray *bni = [VZBridgedNetworkInterface networkInterfaces];
     VZBridgedNetworkInterface *iface = nil;
@@ -174,12 +162,9 @@ VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
 
     if (discURL) {
         NSLog(@"+++ Attaching disc %@\n", discURL);
-        VZDiskImageStorageDeviceAttachment *disc_sda = [[VZDiskImageStorageDeviceAttachment alloc]
-                                                        initWithURL:discURL
-                                                        readOnly:false error:nil];
+        VZDiskImageStorageDeviceAttachment *disc_sda = [[VZDiskImageStorageDeviceAttachment alloc] initWithURL:discURL readOnly:false error:nil];
         if (disc_sda) {
-            VZStorageDeviceConfiguration *disc_conf = [[VZVirtioBlockDeviceConfiguration alloc]
-                                                       initWithAttachment:disc_sda];
+            VZStorageDeviceConfiguration *disc_conf = [[VZVirtioBlockDeviceConfiguration alloc] initWithAttachment:disc_sda];
             discs = [discs arrayByAddingObject:disc_conf];
         } else {
             NSLog(@"--- Couldn't open disc at %@\n", discURL);
@@ -192,8 +177,7 @@ VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
                                                          initWithURL:cdromURL
                                                          readOnly:true error:nil];
         if (cdrom_sda) {
-            VZStorageDeviceConfiguration *cdrom_conf = [[VZVirtioBlockDeviceConfiguration alloc]
-                                                        initWithAttachment:cdrom_sda];
+            VZStorageDeviceConfiguration *cdrom_conf = [[VZVirtioBlockDeviceConfiguration alloc] initWithAttachment:cdrom_sda];
             discs = [discs arrayByAddingObject:cdrom_conf];
         } else {
             NSLog(@"--- Couldn't open disc at %@\n", discURL);
@@ -204,4 +188,3 @@ VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
 
     return conf;
 }
-

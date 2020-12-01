@@ -1,19 +1,11 @@
-//
-//  main.m
-//  podracer
-//
-//  Created by Michael Kuehl on 28.11.20.
-//
-//
 
 #import <Foundation/Foundation.h>
 #import <Virtualization/Virtualization.h>
 #import "vm.h"
 
-#define VERSION "v0.1 25/11/2020"
+#define VERSION "v0.1.0"
 
-static void usage(const char *me)
-{
+static void usage(const char *me) {
     fprintf(stderr, "Syntax:\n\t%s <options>\n\n"
                     "Options are:\n"
                     "\t-k <kernel path> [REQUIRED]\n"
@@ -27,6 +19,21 @@ static void usage(const char *me)
                     me);
 }
 
+/*
+ 
+ https://stackoverflow.com/questions/49698817/objective-c-read-plist-to-nsdictionary
+ 
+ NSURL *url = [NSURL fileURLWithPath:@"/Users/myUser/path/to/foo.plist"];
+ NSError *error;
+ NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
+ NSDictionary *dictionary = [NSPropertyListSerialization propertyListWithData:data options:0 format:nil error:&error];
+ if (error) {
+     // handle error
+ } else {
+     NSLog(@"%@", dictionary);
+ }
+ 
+ */
 
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
@@ -36,6 +43,11 @@ int main(int argc, const char * argv[]) {
             usage(argv[0]);
             return 1;
         }
+        
+        //
+        // extract command line parameters
+        //
+        
         NSString *kern_path = [standardDefaults stringForKey:@"k"];
         NSString *cmdline = [standardDefaults stringForKey:@"a"];
         NSString *initrd_path = [standardDefaults stringForKey:@"i"];
@@ -63,20 +75,23 @@ int main(int argc, const char * argv[]) {
             mem = 512;
         }
         
-        NSLog(@"vftool (" VERSION ") starting");
+        NSLog(@"\n\npodracer (" VERSION ") starting\n\n");
 
-        /* **************************************************************** */
-        // Create config
 
+        //
+        // create the VM config
+        //
+        
         VZVirtualMachineConfiguration *conf = getVMConfig(mem, (int)cpus, 0, cmdline, kern_path, initrd_path, disc_path, cdrom_path, eth_if);
  
         if (!conf) {
-            NSLog(@"Couldn't create configuration for VM.\n");
+            NSLog(@"Couldn't create configuration\n");
             return 1;
         }
 
-        /* **************************************************************** */
-        // Validate config
+        //
+        // validate the VM config
+        //
         
         NSError *confErr = NULL;
         [conf validateWithError:&confErr];
@@ -85,30 +100,31 @@ int main(int argc, const char * argv[]) {
             NSLog(@"-- Configuration vaildation failure! %@\n", confErr);
             return 1;
         }
-        NSLog(@"+++ Configuration validated.\n");
+        NSLog(@"+++ Configuration validated\n");
         
-        /* **************************************************************** */
-        // Create VM
-
-        // Create a secondary dispatch queue because I don't want to use dispatch_main here
+        //
+        // create the VM
+        //
+        
+        // create a secondary dispatch queue because I don't want to use dispatch_main here
         // (i.e. the blocks/interaction works on the main queue unless we do this).
         dispatch_queue_t queue = dispatch_queue_create("Secondary queue", NULL);
         
         VZVirtualMachine *vm = [[VZVirtualMachine alloc] initWithConfiguration:conf queue:queue];
         
         dispatch_sync(queue, ^{
-            NSLog(@"+++ canStart = %d, vm state %d\n", vm.canStart, (int)vm.state);
+            NSLog(@"+++ Can start = %d, vm state %d\n", vm.canStart, (int)vm.state);
             if (!vm.canStart) {
                 NSLog(@"--- VM is not startable :(\n");
                 exit(1);
             }
         });
 
-        // Start VM
+        // Start the VM
         dispatch_sync(queue, ^{
             [vm startWithCompletionHandler:^(NSError *errorOrNil){
                 if (errorOrNil) {
-                    NSLog(@"--- VM start error: %@\n", errorOrNil);
+                    NSLog(@"-+- VM start error: %@\n", errorOrNil);
                     exit(1);
                 } else {
                     NSLog(@"+++ VM started\n");
@@ -119,10 +135,20 @@ int main(int argc, const char * argv[]) {
         // We could register a delegate and get async updates from the state, e.g. shutdown.
         do {
             sleep(1);
-        } while(vm.state == VZVirtualMachineStateRunning ||
-                vm.state == VZVirtualMachineStateStarting);
+        } while(vm.state == VZVirtualMachineStateRunning || vm.state == VZVirtualMachineStateStarting);
         
-        NSLog(@"+++ Done, state = %d\n", (int)vm.state);
+        
+        // print the exit state
+        switch((int)vm.state){
+            case VZVirtualMachineStateStopped:
+                NSLog(@"+++ Stopped\n");
+                break;
+            case VZVirtualMachineStateError:
+                NSLog(@"-+- Error\n");
+                break;
+            default:
+                NSLog(@"+++ Done, state = %d\n", (int)vm.state);
+        }
     }
     return 0;
 }

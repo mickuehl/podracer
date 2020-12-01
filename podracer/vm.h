@@ -1,9 +1,3 @@
-//
-//  vm.h
-//  podracer
-//
-//  Created by Michael Kuehl on 28.11.20.
-//
 
 #ifndef vm_h
 #define vm_h
