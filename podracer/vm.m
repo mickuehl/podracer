@@ -151,12 +151,10 @@ VZVirtualMachineConfiguration *getVMConfig(unsigned long mem_size_mb,
     [net_conf setAttachment:nda];
     [conf setNetworkDevices:@[net_conf]];
     
-
     // Entropy
     VZEntropyDeviceConfiguration *entropy_conf = [[VZVirtioEntropyDeviceConfiguration alloc] init];
     [conf setEntropyDevices:@[entropy_conf]];
     
-
     // Storage/disc
     NSArray *discs = @[];
 
