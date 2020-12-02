@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0D23FC402576D04C0079B38B /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 0D23FC3F2576D04C0079B38B /* hack.m */; };
 		0DC1655B2573000E00BFF92E /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 0DC1655A2573000E00BFF92E /* main.m */; };
 		0DC16568257300F900BFF92E /* vm.m in Sources */ = {isa = PBXBuildFile; fileRef = 0DC16567257300F900BFF92E /* vm.m */; };
 /* End PBXBuildFile section */
@@ -25,7 +24,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		0D23FC3F2576D04C0079B38B /* hack.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = hack.m; sourceTree = "<group>"; };
 		0D64569C25741DD300384DA2 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		0D94E5E625754872006ECF27 /* iso */ = {isa = PBXFileReference; lastKnownFileType = folder; path = iso; sourceTree = "<group>"; };
 		0DC165572573000E00BFF92E /* podracer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = podracer; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -71,7 +69,6 @@
 				0D64569C25741DD300384DA2 /* README.md */,
 				0DC165642573005000BFF92E /* podracer.entitlements */,
 				0DC1655A2573000E00BFF92E /* main.m */,
-				0D23FC3F2576D04C0079B38B /* hack.m */,
 			);
 			path = podracer;
 			sourceTree = "<group>";
@@ -134,7 +131,6 @@
 			files = (
 				0DC16568257300F900BFF92E /* vm.m in Sources */,
 				0DC1655B2573000E00BFF92E /* main.m in Sources */,
-				0D23FC402576D04C0079B38B /* hack.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

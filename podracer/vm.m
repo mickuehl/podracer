@@ -13,6 +13,7 @@
 #include <util.h>
 #include "vm.h"
 
+
 static void attachDevices(VZVirtualMachineConfiguration *conf, NSString *discPath, NSString *cdromPath, NSString *ifConf) {
     
     // stdin, stdout
@@ -34,7 +35,7 @@ static void attachDevices(VZVirtualMachineConfiguration *conf, NSString *discPat
     [consConf setAttachment:spa];
     [conf setSerialPorts:@[consConf]];
     
-    // network devices
+    // network interface
     NSArray *bni = [VZBridgedNetworkInterface networkInterfaces];
     VZBridgedNetworkInterface *iface = nil;
     for (id o in bni) {
@@ -62,7 +63,7 @@ static void attachDevices(VZVirtualMachineConfiguration *conf, NSString *discPat
     VZEntropyDeviceConfiguration *entropyConf = [[VZVirtioEntropyDeviceConfiguration alloc] init];
     [conf setEntropyDevices:@[entropyConf]];
     
-    // volumes
+    // add storage devices
     NSArray *volumes = @[];
 
     if (discURL) {

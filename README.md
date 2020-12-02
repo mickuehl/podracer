@@ -22,3 +22,13 @@ cd iso
 * https://wiki.lindenstruth.org/wiki/Hdiutil#erstellen
 * https://www.tutorialspoint.com/objective_c/index.htm
 
+### Working links
+
+* https://finestructure.co/blog/2020/11/27/running-docker-on-apple-silicon-m1-follow-up
+* https://github.com/JacopoMangiavacchi/M1-Linux-SSH
+* https://github.com/evansm7/vftool
+* https://podman.io/getting-started/installation
+* https://github.com/KhaosT/SimpleVM
+* https://www.tutorialspoint.com/objective_c/objective_c_preprocessors.htm
+* https://developer.apple.com/documentation/virtualization/vzvirtualmachinestate?language=objc
+
